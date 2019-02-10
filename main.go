@@ -5,7 +5,11 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 // KubexyArgs stores passed arguments
@@ -28,6 +32,23 @@ type KubexyApp struct {
 // View is a base interface to collect data for view
 type View interface {
 	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
+// ConfigureServer returns configured http server
+func (app *KubexyApp) ConfigureServer() *http.Server {
+
+	r := mux.NewRouter()
+	for view, impl := range app.Views {
+		r.Handle("/view/"+view, impl)
+	}
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("html/")))
+
+	return &http.Server{
+		Handler:      handlers.LoggingHandler(os.Stdout, r),
+		Addr:         ":8080",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
 }
 
 func main() {
@@ -55,11 +76,7 @@ func main() {
 		app.Views["pods"] = NewViewPodKube(app)
 	}
 
-	// prepare API handlers
-	for view, impl := range app.Views {
-		http.Handle("/view/"+view, impl)
-	}
-
-	log.Fatal(http.ListenAndServe(":8080", nil))
-
+	// start server
+	server := app.ConfigureServer()
+	log.Fatal(server.ListenAndServe())
 }

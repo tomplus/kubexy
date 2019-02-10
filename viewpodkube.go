@@ -21,6 +21,11 @@ type ViewPodKube struct {
 func NewViewPodKube(app KubexyApp) *ViewPodKube {
 	log.Printf("Initialize ViewPod")
 
+	if app.Args.AnonymizeData {
+		// FIXME
+		panic("Option to anonymize your cluster data is not implemented yet")
+	}
+
 	config, err := clientcmd.BuildConfigFromFlags("", app.Args.KubeConfig)
 	if err != nil {
 		panic(err.Error())
